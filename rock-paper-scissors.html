@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jan Ken Pon — Rock Paper Scissors</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink-950:#14120f;
+    --ink-900:#1e1b17;
+    --ink-850:#26221d;
+    --ink-line:#3a352c;
+    --paper:#ede6d6;
+    --paper-dim:#c9c0ac;
+    --seal:#b33327;
+    --seal-light:#d9564a;
+    --gold:#c9a227;
+    --jade:#4f7a64;
+    --muted:#8c8578;
+    --shadow: 0 20px 60px rgba(0,0,0,.45);
+    --radius: 4px;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+
+  body{
+    background:
+      radial-gradient(ellipse at 20% -10%, rgba(201,162,39,.08), transparent 55%),
+      radial-gradient(ellipse at 100% 110%, rgba(179,51,39,.10), transparent 55%),
+      var(--ink-950);
+    color:var(--paper);
+    font-family:'EB Garamond', serif;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:32px 16px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .stage{
+    width:100%;
+    max-width:760px;
+  }
+
+  /* ---------- header ---------- */
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    letter-spacing:.35em;
+    font-size:11px;
+    color:var(--muted);
+    text-align:center;
+    text-transform:uppercase;
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size:clamp(32px, 6vw, 52px);
+    text-align:center;
+    margin:0 0 4px;
+    letter-spacing:.02em;
+    color:var(--paper);
+  }
+  h1 .accent{ color:var(--seal-light); }
+
+  .subline{
+    text-align:center;
+    color:var(--muted);
+    font-style:italic;
+    font-size:16px;
+    margin-bottom:18px;
+  }
+
+  .brush-divider{
+    height:14px;
+    margin:0 auto 26px;
+    max-width:420px;
+  }
+  .brush-divider svg{ width:100%; height:100%; display:block; }
+
+  /* ---------- scoreboard ---------- */
+  .scoreboard{
+    display:flex;
+    justify-content:center;
+    gap:28px;
+    flex-wrap:wrap;
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:26px;
+  }
+  .scoreboard .stat{ text-align:center; }
+  .scoreboard .stat b{
+    display:block;
+    font-size:22px;
+    color:var(--paper);
+    font-weight:600;
+    margin-bottom:2px;
+  }
+  .scoreboard .stat.wins b{ color:var(--gold); }
+  .scoreboard .stat.losses b{ color:var(--seal-light); }
+  .scoreboard .stat.streak b{ color:var(--jade); }
+
+  /* ---------- arena ---------- */
+  .arena{
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    align-items:center;
+    gap:18px;
+    background:var(--ink-900);
+    border:1px solid var(--ink-line);
+    border-radius:var(--radius);
+    padding:34px 20px;
+    box-shadow:var(--shadow);
+    position:relative;
+    overflow:hidden;
+    margin-bottom:22px;
+  }
+
+  .fighter{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+  }
+  .fighter .tag{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:.25em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .fighter.you .tag{ color:var(--jade); }
+  .fighter.cpu .tag{ color:var(--seal-light); }
+
+  .hand-slot{
+    width:108px;
+    height:108px;
+    border-radius:50%;
+    background:var(--ink-850);
+    border:1.5px solid var(--ink-line);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    transition:transform .15s ease, border-color .2s ease;
+  }
+  .hand-slot svg{ width:56px; height:56px; }
+  .hand-slot.shaking{ animation:shake .55s ease-in-out infinite; }
+  .hand-slot.reveal{ animation:pop .35s cubic-bezier(.2,1.4,.4,1); }
+  .hand-slot.winner{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(201,162,39,.18); }
+
+  @keyframes shake{
+    0%,100%{ transform:rotate(0deg) translateY(0); }
+    25%{ transform:rotate(-8deg) translateY(-3px); }
+    75%{ transform:rotate(8deg) translateY(-3px); }
+  }
+  @keyframes pop{
+    0%{ transform:scale(.7); }
+    60%{ transform:scale(1.12); }
+    100%{ transform:scale(1); }
+  }
+
+  .vs-mark{
+    font-family:'Shippori Mincho', serif;
+    font-size:22px;
+    color:var(--ink-line);
+    font-weight:700;
+  }
+
+  /* seal stamp result */
+  .stamp{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+  }
+  .stamp .ring{
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size:26px;
+    letter-spacing:.15em;
+    color:var(--seal-light);
+    border:3px solid var(--seal-light);
+    border-radius:50%;
+    padding:14px 20px;
+    transform:scale(0) rotate(-18deg);
+    opacity:0;
+    background:rgba(20,18,15,.72);
+    text-transform:uppercase;
+  }
+  .stamp.show .ring{
+    animation:stampdown .38s ease-out forwards;
+  }
+  .stamp .ring.win{ color:var(--gold); border-color:var(--gold); }
+  .stamp .ring.draw{ color:var(--muted); border-color:var(--muted); }
+
+  @keyframes stampdown{
+    0%{ transform:scale(2.4) rotate(-18deg); opacity:0; }
+    60%{ transform:scale(.92) rotate(-10deg); opacity:1; }
+    100%{ transform:scale(1) rotate(-12deg); opacity:1; }
+  }
+
+  .call-line{
+    text-align:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:.15em;
+    color:var(--muted);
+    min-height:18px;
+    margin-bottom:18px;
+    text-transform:uppercase;
+  }
+
+  /* ---------- controls ---------- */
+  .choices{
+    display:flex;
+    justify-content:center;
+    gap:16px;
+    margin-bottom:26px;
+    flex-wrap:wrap;
+  }
+  .choice-btn{
+    width:84px;
+    height:84px;
+    border-radius:50%;
+    background:var(--ink-900);
+    border:1.5px solid var(--ink-line);
+    color:var(--paper);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:transform .12s ease, border-color .15s ease, background .15s ease;
+    position:relative;
+  }
+  .choice-btn svg{ width:38px; height:38px; }
+  .choice-btn:hover{ border-color:var(--seal-light); transform:translateY(-3px); }
+  .choice-btn:active{ transform:translateY(0) scale(.95); }
+  .choice-btn:focus-visible{
+    outline:2px solid var(--gold);
+    outline-offset:3px;
+  }
+  .choice-btn:disabled{ opacity:.35; cursor:not-allowed; transform:none; }
+  .choice-btn .key-hint{
+    position:absolute;
+    bottom:-20px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    color:var(--muted);
+    letter-spacing:.1em;
+  }
+
+  /* ---------- history strip ---------- */
+  .history{
+    display:flex;
+    justify-content:center;
+    gap:6px;
+    flex-wrap:wrap;
+    margin-bottom:30px;
+    min-height:14px;
+  }
+  .history .dot{
+    width:10px; height:10px; border-radius:50%;
+    background:var(--ink-line);
+    cursor:default;
+  }
+  .history .dot.win{ background:var(--gold); }
+  .history .dot.lose{ background:var(--seal-light); }
+  .history .dot.draw{ background:var(--muted); }
+
+  /* ---------- settings panel ---------- */
+  .panel{
+    background:var(--ink-900);
+    border:1px solid var(--ink-line);
+    border-radius:var(--radius);
+    padding:20px 22px;
+  }
+  .panel-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    padding:10px 0;
+    border-bottom:1px solid var(--ink-line);
+    flex-wrap:wrap;
+  }
+  .panel-row:last-child{ border-bottom:none; }
+  .panel-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .seg{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+  }
+  .seg button{
+    font-family:'EB Garamond', serif;
+    font-size:14px;
+    padding:6px 14px;
+    border-radius:2px;
+    border:1px solid var(--ink-line);
+    background:transparent;
+    color:var(--paper-dim);
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .seg button.active{
+    background:var(--seal);
+    border-color:var(--seal);
+    color:var(--paper);
+  }
+  .seg button:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+  .toggle{
+    width:40px; height:22px;
+    border-radius:11px;
+    background:var(--ink-line);
+    border:none;
+    position:relative;
+    cursor:pointer;
+  }
+  .toggle .knob{
+    position:absolute;
+    top:2px; left:2px;
+    width:18px; height:18px;
+    border-radius:50%;
+    background:var(--paper-dim);
+    transition:transform .18s ease, background .18s ease;
+  }
+  .toggle.on{ background:var(--jade); }
+  .toggle.on .knob{ transform:translateX(18px); background:var(--paper); }
+
+  .reset-btn{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:.15em;
+    text-transform:uppercase;
+    color:var(--muted);
+    background:none;
+    border:1px solid var(--ink-line);
+    padding:8px 14px;
+    border-radius:2px;
+    cursor:pointer;
+  }
+  .reset-btn:hover{ color:var(--seal-light); border-color:var(--seal-light); }
+
+  .match-banner{
+    text-align:center;
+    font-family:'Shippori Mincho', serif;
+    font-size:20px;
+    color:var(--gold);
+    margin:14px 0 -6px;
+    min-height:26px;
+  }
+
+  .sr-only{
+    position:absolute; width:1px; height:1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.001s !important; transition-duration:.001s !important; }
+  }
+
+  @media (max-width:520px){
+    .arena{ grid-template-columns:1fr; gap:14px; }
+    .vs-mark{ display:none; }
+    .hand-slot{ width:96px; height:96px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="eyebrow">じゃんけんぽん · the dojo wager</div>
+  <h1>Jan Ken <span class="accent">Pon</span></h1>
+  <div class="subline">Three forms. One instant. No second throw.</div>
+
+  <div class="brush-divider" aria-hidden="true">
+    <svg viewBox="0 0 420 14" preserveAspectRatio="none">
+      <path d="M2,7 C60,2 120,11 200,6 C280,1 340,10 418,5" fill="none" stroke="#3a352c" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <div class="scoreboard" aria-hidden="false">
+    <div class="stat wins"><b id="statWins">0</b>wins</div>
+    <div class="stat losses"><b id="statLosses">0</b>losses</div>
+    <div class="stat"><b id="statDraws">0</b>draws</div>
+    <div class="stat streak"><b id="statStreak">0</b>streak</div>
+    <div class="stat"><b id="statBest">0</b>best</div>
+  </div>
+
+  <div class="match-banner" id="matchBanner" aria-live="polite"></div>
+
+  <div class="arena" id="arena">
+    <div class="fighter you">
+      <span class="tag">You</span>
+      <div class="hand-slot" id="youSlot"><svg id="youIcon"></svg></div>
+    </div>
+    <div class="vs-mark">対</div>
+    <div class="fighter cpu">
+      <span class="tag" id="cpuTag">Opponent</span>
+      <div class="hand-slot" id="cpuSlot"><svg id="cpuIcon"></svg></div>
+    </div>
+    <div class="stamp" id="stamp"><div class="ring" id="stampRing"></div></div>
+  </div>
+
+  <div class="call-line" id="callLine" aria-live="polite">choose your throw</div>
+
+  <div class="choices" role="group" aria-label="Choose rock, paper, or scissors">
+    <button class="choice-btn" data-choice="rock" aria-label="Rock (key R)">
+      <svg viewBox="0 0 100 100"></svg>
+      <span class="key-hint">R</span>
+    </button>
+    <button class="choice-btn" data-choice="paper" aria-label="Paper (key P)">
+      <svg viewBox="0 0 100 100"></svg>
+      <span class="key-hint">P</span>
+    </button>
+    <button class="choice-btn" data-choice="scissors" aria-label="Scissors (key S)">
+      <svg viewBox="0 0 100 100"></svg>
+      <span class="key-hint">S</span>
+    </button>
+  </div>
+
+  <div class="history" id="history" aria-label="Round history"></div>
+
+  <div class="panel">
+    <div class="panel-row">
+      <span class="panel-label">Match length</span>
+      <div class="seg" id="bestOfSeg">
+        <button data-val="3">Best of 3</button>
+        <button data-val="5" class="active">Best of 5</button>
+        <button data-val="7">Best of 7</button>
+        <button data-val="0">Endless</button>
+      </div>
+    </div>
+    <div class="panel-row">
+      <span class="panel-label">Opponent style</span>
+      <div class="seg" id="aiSeg">
+        <button data-val="novice" class="active">Novice</button>
+        <button data-val="strategist">Strategist</button>
+        <button data-val="trickster">Trickster</button>
+      </div>
+    </div>
+    <div class="panel-row">
+      <span class="panel-label">Sound</span>
+      <button class="toggle on" id="soundToggle" aria-pressed="true" aria-label="Toggle sound"><span class="knob"></span></button>
+    </div>
+    <div class="panel-row">
+      <span class="panel-label">Session</span>
+      <button class="reset-btn" id="resetBtn">Reset score</button>
+    </div>
+  </div>
+
+  <p class="sr-only" id="liveResult" aria-live="assertive"></p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- icon paths (ink-brush style) ---------- */
+  const ICONS = {
+    rock: `<path d="M50 12 C34 12 22 20 18 34 C14 48 20 58 16 68 C12 78 22 88 40 88 L64 88 C82 88 88 76 84 64 C90 56 88 44 80 36 C78 22 66 12 50 12 Z"
+            fill="#ede6d6" stroke="#14120f" stroke-width="3" stroke-linejoin="round"/>
+           <path d="M32 40 Q46 34 58 42" fill="none" stroke="#14120f" stroke-width="2" stroke-linecap="round" opacity=".45"/>`,
+    paper: `<rect x="26" y="10" width="48" height="80" rx="4" fill="#ede6d6" stroke="#14120f" stroke-width="3"/>
+            <path d="M26 24 L74 24 M26 40 L74 40 M26 56 L74 56 M26 72 L60 72" stroke="#14120f" stroke-width="2" opacity=".4" stroke-linecap="round"/>
+            <path d="M74 10 L74 24 L60 10 Z" fill="#c9a227" stroke="#14120f" stroke-width="2" stroke-linejoin="round"/>`,
+    scissors: `<circle cx="26" cy="26" r="11" fill="none" stroke="#14120f" stroke-width="4"/>
+               <circle cx="26" cy="74" r="11" fill="none" stroke="#14120f" stroke-width="4"/>
+               <path d="M34 33 L86 84 M34 67 L86 16" stroke="#14120f" stroke-width="4" stroke-linecap="round"/>
+               <path d="M34 33 L86 84 M34 67 L86 16" stroke="#ede6d6" stroke-width="1.4" stroke-linecap="round"/>`
+  };
+  const LABELS = { rock:"Rock", paper:"Paper", scissors:"Scissors" };
+
+  document.querySelectorAll('.choice-btn').forEach(btn=>{
+    btn.querySelector('svg').innerHTML = ICONS[btn.dataset.choice];
+  });
+
+  /* ---------- audio (synthesized, no external files) ---------- */
+  let audioCtx = null;
+  function ctx(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
+  function blip(freq, dur, type, gain){
+    if(!state.sound) return;
+    try{
+      const c = ctx();
+      const osc = c.createOscillator();
+      const g = c.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      g.gain.value = gain || 0.06;
+      osc.connect(g); g.connect(c.destination);
+      osc.start();
+      g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
+      osc.stop(c.currentTime + dur);
+    }catch(e){}
+  }
+  const sfx = {
+    tick: ()=>blip(320,.08,'square',.04),
+    win:  ()=>{ blip(660,.12,'triangle',.07); setTimeout(()=>blip(880,.18,'triangle',.07),90); },
+    lose: ()=>blip(140,.28,'sawtooth',.05),
+    draw: ()=>blip(400,.18,'sine',.05),
+    stamp:()=>blip(90,.1,'square',.08)
+  };
+
+  /* ---------- state ---------- */
+  const state = {
+    wins:0, losses:0, draws:0, streak:0, best:0,
+    bestOf:5, ai:'novice', sound:true,
+    history:[], playerLog:[], locked:false, matchOver:false
+  };
+
+  const els = {
+    wins: document.getElementById('statWins'),
+    losses: document.getElementById('statLosses'),
+    draws: document.getElementById('statDraws'),
+    streak: document.getElementById('statStreak'),
+    best: document.getElementById('statBest'),
+    youIcon: document.getElementById('youIcon'),
+    cpuIcon: document.getElementById('cpuIcon'),
+    youSlot: document.getElementById('youSlot'),
+    cpuSlot: document.getElementById('cpuSlot'),
+    callLine: document.getElementById('callLine'),
+    stamp: document.getElementById('stamp'),
+    stampRing: document.getElementById('stampRing'),
+    history: document.getElementById('history'),
+    matchBanner: document.getElementById('matchBanner'),
+    liveResult: document.getElementById('liveResult'),
+    cpuTag: document.getElementById('cpuTag'),
+  };
+
+  const CPU_NAMES = { novice:'Novice', strategist:'Strategist', trickster:'Trickster' };
+
+  function updateScoreboard(){
+    els.wins.textContent = state.wins;
+    els.losses.textContent = state.losses;
+    els.draws.textContent = state.draws;
+    els.streak.textContent = state.streak;
+    els.best.textContent = state.best;
+  }
+
+  function renderHistory(){
+    els.history.innerHTML = '';
+    state.history.slice(-24).forEach(r=>{
+      const d = document.createElement('span');
+      d.className = 'dot ' + r;
+      els.history.appendChild(d);
+    });
+  }
+
+  /* ---------- AI logic ---------- */
+  const BEATS = { rock:'scissors', paper:'rock', scissors:'paper' };
+  const LOSES_TO = { rock:'paper', paper:'scissors', scissors:'rock' };
+  const ALL = ['rock','paper','scissors'];
+
+  function cpuChoose(){
+    if(state.ai === 'novice' || state.playerLog.length === 0){
+      return ALL[Math.floor(Math.random()*3)];
+    }
+    if(state.ai === 'trickster'){
+      // counters what the player is likely to repeat: their last move
+      const last = state.playerLog[state.playerLog.length-1];
+      // 65% counter the last move, 35% random (keeps it beatable)
+      return Math.random() < 0.65 ? LOSES_TO[last] : ALL[Math.floor(Math.random()*3)];
+    }
+    if(state.ai === 'strategist'){
+      // counters the player's most frequent move overall
+      const freq = { rock:0, paper:0, scissors:0 };
+      state.playerLog.forEach(m=>freq[m]++);
+      const top = Object.keys(freq).sort((a,b)=>freq[b]-freq[a])[0];
+      return Math.random() < 0.7 ? LOSES_TO[top] : ALL[Math.floor(Math.random()*3)];
+    }
+    return ALL[Math.floor(Math.random()*3)];
+  }
+
+  function decide(you, cpu){
+    if(you === cpu) return 'draw';
+    return BEATS[you] === cpu ? 'win' : 'lose';
+  }
+
+  /* ---------- round flow ---------- */
+  const CALLS = ['ISHO', '...NI...', 'JAN KEN PON!'];
+
+  function playRound(choice){
+    if(state.locked || state.matchOver) return;
+    state.locked = true;
+    document.querySelectorAll('.choice-btn').forEach(b=>b.disabled = true);
+
+    els.youIcon.innerHTML = '';
+    els.cpuIcon.innerHTML = '';
+    els.youSlot.classList.remove('winner');
+    els.cpuSlot.classList.remove('winner');
+    els.stamp.classList.remove('show');
+    els.youSlot.classList.add('shaking');
+    els.cpuSlot.classList.add('shaking');
+
+    let step = 0;
+    els.callLine.textContent = 'jan...';
+    sfx.tick();
+    const timer = setInterval(()=>{
+      step++;
+      if(step < CALLS.length){
+        els.callLine.textContent = CALLS[step-1].toLowerCase();
+        sfx.tick();
+      } else {
+        clearInterval(timer);
+        reveal(choice);
+      }
+    }, 260);
+  }
+
+  function reveal(you){
+    const cpu = cpuChoose();
+    state.playerLog.push(you);
+
+    els.youSlot.classList.remove('shaking');
+    els.cpuSlot.classList.remove('shaking');
+    els.youIcon.innerHTML = ICONS[you];
+    els.cpuIcon.innerHTML = ICONS[cpu];
+    els.youSlot.classList.add('reveal');
+    els.cpuSlot.classList.add('reveal');
+
+    const result = decide(you, cpu);
+    els.callLine.textContent = `you: ${LABELS[you]}  ·  opponent: ${LABELS[cpu]}`;
+
+    if(result === 'win'){
+      state.wins++; state.streak = state.streak>0? state.streak+1 : 1;
+      state.best = Math.max(state.best, state.streak);
+      els.youSlot.classList.add('winner');
+      sfx.win();
+      stampResult('WIN', 'win');
+      els.liveResult.textContent = `You win this round with ${LABELS[you]} against ${LABELS[cpu]}.`;
+    } else if(result === 'lose'){
+      state.losses++; state.streak = state.streak<0? state.streak-1 : -1;
+      els.cpuSlot.classList.add('winner');
+      sfx.lose();
+      stampResult('LOSE', 'lose');
+      els.liveResult.textContent = `You lose this round. ${LABELS[cpu]} beats ${LABELS[you]}.`;
+    } else {
+      state.draws++; state.streak = 0;
+      sfx.draw();
+      stampResult('DRAW', 'draw');
+      els.liveResult.textContent = `Draw. Both chose ${LABELS[you]}.`;
+    }
+
+    state.history.push(result);
+    updateScoreboard();
+    renderHistory();
+    checkMatchEnd();
+
+    setTimeout(()=>{
+      state.locked = false;
+      if(!state.matchOver){
+        document.querySelectorAll('.choice-btn').forEach(b=>b.disabled = false);
+        els.callLine.textContent = 'choose your throw';
+      }
+    }, 900);
+  }
+
+  function stampResult(text, cls){
+    els.stampRing.textContent = text;
+    els.stampRing.className = 'ring ' + cls;
+    els.stamp.classList.remove('show');
+    void els.stamp.offsetWidth; // restart animation
+    els.stamp.classList.add('show');
+    sfx.stamp();
+    setTimeout(()=> els.stamp.classList.remove('show'), 1100);
+  }
+
+  function checkMatchEnd(){
+    if(state.bestOf === 0) return; // endless mode
+    const need = Math.ceil(state.bestOf/2);
+    if(state.wins >= need){
+      state.matchOver = true;
+      els.matchBanner.textContent = `Match won — ${state.wins} to ${state.losses}. The dojo bows to you.`;
+      lockForMatchEnd();
+    } else if(state.losses >= need){
+      state.matchOver = true;
+      els.matchBanner.textContent = `Match lost — ${state.wins} to ${state.losses}. The dojo will see you again.`;
+      lockForMatchEnd();
+    }
+  }
+  function lockForMatchEnd(){
+    setTimeout(()=>{
+      document.querySelectorAll('.choice-btn').forEach(b=>b.disabled = true);
+      els.callLine.textContent = 'match complete — reset to play again';
+    }, 950);
+  }
+
+  /* ---------- wiring ---------- */
+  document.querySelectorAll('.choice-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=> playRound(btn.dataset.choice));
+  });
+
+  document.addEventListener('keydown', (e)=>{
+    const map = { r:'rock', p:'paper', s:'scissors' };
+    const k = e.key.toLowerCase();
+    if(map[k]) playRound(map[k]);
+  });
+
+  document.getElementById('bestOfSeg').addEventListener('click', (e)=>{
+    const b = e.target.closest('button'); if(!b) return;
+    document.querySelectorAll('#bestOfSeg button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    state.bestOf = parseInt(b.dataset.val, 10);
+    resetMatchOnly();
+  });
+
+  document.getElementById('aiSeg').addEventListener('click', (e)=>{
+    const b = e.target.closest('button'); if(!b) return;
+    document.querySelectorAll('#aiSeg button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    state.ai = b.dataset.val;
+    els.cpuTag.textContent = CPU_NAMES[state.ai];
+  });
+
+  const soundToggle = document.getElementById('soundToggle');
+  soundToggle.addEventListener('click', ()=>{
+    state.sound = !state.sound;
+    soundToggle.classList.toggle('on', state.sound);
+    soundToggle.setAttribute('aria-pressed', String(state.sound));
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    state.wins=0; state.losses=0; state.draws=0; state.streak=0; state.best=0;
+    state.history=[]; state.playerLog=[]; state.matchOver=false; state.locked=false;
+    updateScoreboard(); renderHistory();
+    els.matchBanner.textContent = '';
+    els.callLine.textContent = 'choose your throw';
+    els.youIcon.innerHTML=''; els.cpuIcon.innerHTML='';
+    els.youSlot.classList.remove('winner'); els.cpuSlot.classList.remove('winner');
+    document.querySelectorAll('.choice-btn').forEach(b=>b.disabled = false);
+  });
+
+  function resetMatchOnly(){
+    state.wins=0; state.losses=0; state.draws=0; state.matchOver=false; state.locked=false;
+    updateScoreboard();
+    els.matchBanner.textContent = '';
+    els.callLine.textContent = 'choose your throw';
+    document.querySelectorAll('.choice-btn').forEach(b=>b.disabled = false);
+  }
+
+  updateScoreboard();
+})();
+</script>
+</body>
+</html>
